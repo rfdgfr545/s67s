@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>광부 시뮬레이터 - 72종 원석 도감</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        * {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        .mining-shake {
+            animation: shake 0.12s ease-in-out;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(-3px, 2px); }
+            50% { transform: translate(3px, -2px); }
+            75% { transform: translate(-2px, -2px); }
+        }
+        .glow-gold {
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
+        }
+        .glow-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-amber-500 selection:text-slate-900">
+
+    <!-- Top Header -->
+    <header class="bg-slate-900/90 border-b border-slate-800 p-3 sticky top-0 z-30 backdrop-blur-md">
+        <div class="max-w-4xl mx-auto flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/30 to-amber-700/30 border border-amber-500/50 flex items-center justify-center text-amber-400 text-xl font-bold shadow-inner">
+                    <i class="fa-solid fa-pickaxe"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-base sm:text-lg tracking-tight text-amber-400 flex items-center gap-1.5">
+                        광부 시뮬레이터
+                    </h1>
+                    <p class="text-[11px] text-slate-400">지하 12층 72종 전설의 원석을 탐사하라</p>
+                </div>
+            </div>
+
+            <!-- Currency & Status Display Bar -->
+            <div class="flex items-center gap-1.5 sm:gap-2.5 flex-wrap justify-end">
+                <button id="audioToggleBtn" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1 text-slate-300 transition-all">
+                    <i id="audioIcon" class="fa-solid fa-volume-high text-amber-400"></i>
+                </button>
+                <div class="bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs sm:text-sm">
+                    <i class="fa-solid fa-coins text-amber-400"></i>
+                    <span id="goldDisplay" class="font-bold text-amber-300">0 G</span>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs sm:text-sm hidden sm:flex">
+                    <i class="fa-solid fa-trophy text-rose-400"></i>
+                    <span id="goalDisplay" class="font-bold text-rose-300">목표: 10¹⁸ G</span>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs sm:text-sm">
+                    <i class="fa-solid fa-gem text-cyan-400"></i>
+                    <span id="tradeStoneDisplay" class="font-bold text-cyan-300">0개</span>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs sm:text-sm">
+                    <i class="fa-solid fa-book text-emerald-400"></i>
+                    <span id="encyclopediaPointDisplay" class="font-bold text-emerald-300">0 P</span>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs sm:text-sm">
+                    <i class="fa-solid fa-stairs text-indigo-400"></i>
+                    <span id="floorHeaderDisplay" class="font-bold text-indigo-300">1층</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-4xl w-full mx-auto p-3 flex flex-col gap-3">
+
+        <!-- TAB 1: MINE shaft view -->
+        <section id="tab-mine" class="flex-1 flex flex-col gap-3">
+            <!-- Mining Tunnel Canvas Canvas Container -->
+            <div id="canvasBox" class="relative bg-slate-900 border-2 border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col items-center justify-center min-h-[260px] sm:min-h-[340px]">
+                
+                <!-- Floor Status Overlay -->
+                <div class="absolute top-3 left-3 bg-slate-950/80 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-800 flex items-center gap-2 text-xs font-semibold z-10">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="tunnelFloorText" class="text-slate-200">B1F 지하 1층</span>
+                </div>
+
+                <div class="absolute top-3 right-3 bg-slate-950/80 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-800 flex items-center gap-2 text-xs z-10 text-slate-300">
+                    <i class="fa-solid fa-keyboard text-amber-400"></i>
+                    <span id="keyBindHint">단축키: [Space]</span>
+                </div>
+
+                <canvas id="mineCanvas" class="w-full h-full cursor-pointer block max-h-[360px]" width="800" height="340"></canvas>
+
+                <!-- On-Screen Block Health Bar -->
+                <div class="absolute bottom-3 left-1/2 -translate-x-1/2 w-5/6 sm:w-1/2 bg-slate-950/90 border border-slate-700 p-2.5 rounded-xl backdrop-blur z-10 shadow-lg">
+                    <div class="flex justify-between items-center text-xs mb-1">
+                        <span id="blockTypeLabel" class="font-bold text-slate-300">회색 돌 [?]</span>
+                        <span id="blockHpLabel" class="text-amber-400 font-mono font-bold">10 / 10</span>
+                    </div>
+                    <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700/50">
+                        <div id="blockHpBar" class="h-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-75" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Mining Button -->
+            <div class="flex flex-col sm:flex-row gap-2">
+                <button id="mineBtn" class="flex-1 py-4 px-6 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-400 active:scale-[0.98] text-slate-950 font-extrabold text-lg rounded-2xl shadow-xl border-b-4 border-amber-800 transition-all flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-hammer text-2xl"></i>
+                    <span>곡괭이질 하기 (터치 / 클릭)</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- TAB 2: ENCYCLOPEDIA View -->
+        <section id="tab-encyclopedia" class="hidden flex-1 flex flex-col gap-3">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+                    <div>
+                        <h2 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+                            <i class="fa-solid fa-book-bookmark"></i> 원석 도감 (총 72종)
+                        </h2>
+                        <p class="text-xs text-slate-400">발견한 원석은 자동으로 도감에 등록되며, 2회째부터 자동 판매됩니다.</p>
+                    </div>
+                    <div class="bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300">
+                        수집률: <span id="encyclopediaProgress" class="text-amber-400 font-bold">0 / 72</span> (<span id="encyclopediaPercent">0%</span>)
+                    </div>
+                </div>
+
+                <!-- Floor Filter Tabs -->
+                <div id="floorFilterContainer" class="flex items-center gap-1.5 overflow-x-auto pb-2 mb-3 border-b border-slate-800">
+                    <button class="filter-btn active-filter px-3 py-1 rounded-lg text-xs font-bold bg-amber-500 text-slate-950 shrink-0" data-floor="all">전체</button>
+                    <!-- Floors 1 to 12 generated by JS -->
+                </div>
+
+                <!-- Ore Grid -->
+                <div id="encyclopediaGrid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5 max-h-[460px] overflow-y-auto p-1">
+                    <!-- Dynamic cards -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: FLOORS & UPGRADES View -->
+        <section id="tab-shop" class="hidden flex-1 flex flex-col gap-3">
+            <!-- Pickaxe Upgrade Card -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <div id="pickaxeIconBg" class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-700/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-3xl shrink-0">
+                        <i class="fa-solid fa-pickaxe" id="pickaxeIcon"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 id="pickaxeName" class="font-bold text-base text-slate-100">나무 곡괭이</h3>
+                            <span id="pickaxeLevelTag" class="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">Lv.1</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1">타격당 채굴력: <span id="pickaxePowerText" class="text-emerald-400 font-bold">1</span></p>
+                        <p class="text-xs text-slate-500">곡괭이를 강화하면 더 빠르게 단단한 돌을 파낼 수 있습니다.</p>
+                    </div>
+                </div>
+                <button id="upgradePickaxeBtn" class="w-full sm:w-auto px-5 py-3 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold rounded-xl border-b-2 border-indigo-800 transition-all text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-circle-arrow-up"></i>
+                    <span>강화하기 (<span id="pickaxeCostText">50 G</span>)</span>
+                </button>
+            </div>
+
+            <!-- Miner Worker Card -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-indigo-700/20 border border-blue-500/40 flex items-center justify-center text-blue-400 text-3xl shrink-0">
+                        <i class="fa-solid fa-user-gear"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-bold text-base text-slate-100">광산 채굴 알바</h3>
+                            <span id="workerLevelTag" class="text-xs bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded-full font-bold">미고용</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1">자동 채굴 능력: <span id="workerStatText" class="text-cyan-400 font-bold">없음</span></p>
+                        <p class="text-xs text-slate-500">알바를 고용하면 유저와 함께 곡괭이질을 자동으로 수행합니다. (Lv.1~10)</p>
+                    </div>
+                </div>
+                <button id="upgradeWorkerBtn" class="w-full sm:w-auto px-5 py-3 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-bold rounded-xl border-b-2 border-blue-800 transition-all text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>고용/강화 (<span id="workerCostText">300 G</span>)</span>
+                </button>
+            </div>
+
+            <!-- Encyclopedia Research Card -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-700/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-3xl shrink-0">
+                        <i class="fa-solid fa-tags"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-bold text-base text-slate-100">층 해금 비용 할인 (도감 연구)</h3>
+                            <span id="discountLevelTag" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">0% 할인</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1">필요 연구 포인트: <span class="text-emerald-400 font-bold">도감 포인트 6 P</span></p>
+                        <p class="text-xs text-slate-500">신규 원석 수집 시 획득하는 도감 포인트로 층 해금 비용을 5%씩 할인받습니다.</p>
+                    </div>
+                </div>
+                <button id="upgradeDiscountBtn" class="w-full sm:w-auto px-5 py-3 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold rounded-xl border-b-2 border-emerald-800 transition-all text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-percent"></i>
+                    <span>연구하기 (6 P)</span>
+                </button>
+            </div>
+
+            <!-- Trade Stone Shop (Permanent Buffs) -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                <h3 class="font-bold text-cyan-400 mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-gem"></i> 거래석 교환소 (버프 구매)
+                </h3>
+                <p class="text-xs text-slate-400 mb-3">채굴 중 0.05% 확률로 등장하는 거래석을 사용하여 특수 영구 버프를 획득합니다.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+                        <div>
+                            <div class="font-bold text-xs text-slate-200">판매 골드 +20%</div>
+                            <div class="text-[10px] text-slate-400">현재: <span id="buffGoldText" class="text-amber-400 font-bold">+0%</span></div>
+                        </div>
+                        <button id="buyBuffGoldBtn" class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg text-xs">
+                            구매 (거래석 2개)
+                        </button>
+                    </div>
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+                        <div>
+                            <div class="font-bold text-xs text-slate-200">곡괭이 채굴력 +30%</div>
+                            <div class="text-[10px] text-slate-400">현재: <span id="buffPowerText" class="text-emerald-400 font-bold">+0%</span></div>
+                        </div>
+                        <button id="buyBuffPowerBtn" class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg text-xs">
+                            구매 (거래석 3개)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shaft Floors Unlock List -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                <h3 class="font-bold text-amber-400 mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-layer-group"></i> 광산 층 탐사 (총 12층)
+                </h3>
+                <p class="text-xs text-slate-400 mb-4">아래 층을 해금할수록 내구도가 높고 가치가 높은 희귀 원석이 등장합니다. (층별 내구도 1.7배 상승)</p>
+
+                <div id="floorsList" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[380px] overflow-y-auto p-1">
+                    <!-- 12 floors dynamically generated -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: SETTINGS View -->
+        <section id="tab-settings" class="hidden flex-1 flex flex-col gap-3">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                <h2 class="text-lg font-bold text-amber-400 mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders"></i> 조작키 및 환경 설정
+                </h2>
+                <p class="text-xs text-slate-400 mb-6">원하는 키보드 버튼으로 광질 키를 변경할 수 있습니다.</p>
+
+                <div class="space-y-4 max-w-md">
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+                        <div>
+                            <div class="font-bold text-sm text-slate-200">곡괭이질 조작키</div>
+                            <div class="text-xs text-slate-400 mt-0.5">현재 설정된 키: <span id="currentKeyText" class="text-amber-400 font-mono font-bold">Space</span></div>
+                        </div>
+                        <button id="rebindBtn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-lg text-xs font-bold transition-all">
+                            키 변경하기
+                        </button>
+                    </div>
+
+                    <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-xs text-slate-400 space-y-2">
+                        <div class="font-bold text-slate-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-info text-amber-400"></i> 광산 규칙 안내
+                        </div>
+                        <ul class="list-disc list-inside space-y-1 text-slate-400">
+                            <li><strong class="text-slate-300">회색 돌:</strong> 캐기 전엔 내부 원석을 알 수 없으며 모두 회색 돌로 위장되어 있습니다.</li>
+                            <li><strong class="text-slate-300">단단한 돌 (페이크):</strong> 내구도가 매우 높지만 <span class="text-amber-300">40% 확률로 일반 돌</span>이 나오는 블록입니다.</li>
+                            <li><strong class="text-slate-300">균열된 돌:</strong> 내구도가 매우 낮지만 <span class="text-amber-300">90% 확률로 일반 돌</span>이 나옵니다. (10% 확률로 희귀 원석)</li>
+                            <li><strong class="text-slate-300">전체 비율:</strong> 광산은 전체적으로 약 85% 이상이 돌로 구성되어 있습니다.</li>
+                        </ul>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-800 flex justify-end">
+                        <button id="resetGameBtn" class="px-4 py-2 bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-800/50 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-trash-can"></i>
+                            <span>데이터 초기화</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Notification Footer -->
+    <div class="bg-slate-900/95 border-t border-slate-800 p-3 backdrop-blur-md sticky bottom-14 sm:bottom-0 z-20">
+        <div class="max-w-4xl mx-auto flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-bullhorn text-amber-400 text-sm"></i>
+            </div>
+            <div class="flex-1 overflow-hidden">
+                <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">최근 채굴 결과</div>
+                <div id="latestLogText" class="text-xs sm:text-sm text-slate-200 font-medium truncate">
+                    곡괭이질을 시작하여 지하 광산을 탐사하세요!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Bar -->
+    <nav class="bg-slate-950 border-t border-slate-800 py-2 px-3 z-30">
+        <div class="max-w-md mx-auto grid grid-cols-4 gap-1">
+            <button data-tab="tab-mine" class="nav-btn active flex flex-col items-center gap-1 py-1 px-2 rounded-xl text-amber-400 hover:bg-slate-900 transition-all">
+                <i class="fa-solid fa-bore-hole text-base"></i>
+                <span class="text-[11px] font-bold">광산</span>
+            </button>
+            <button data-tab="tab-encyclopedia" class="nav-btn flex flex-col items-center gap-1 py-1 px-2 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900 transition-all">
+                <i class="fa-solid fa-book-open text-base"></i>
+                <span class="text-[11px] font-bold">도감</span>
+            </button>
+            <button data-tab="tab-shop" class="nav-btn flex flex-col items-center gap-1 py-1 px-2 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900 transition-all">
+                <i class="fa-solid fa-store text-base"></i>
+                <span class="text-[11px] font-bold">해금/강화</span>
+            </button>
+            <button data-tab="tab-settings" class="nav-btn flex flex-col items-center gap-1 py-1 px-2 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900 transition-all">
+                <i class="fa-solid fa-gear text-base"></i>
+                <span class="text-[11px] font-bold">설정</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Victory Ending Modal -->
+    <div id="endingModal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-amber-500/80 rounded-3xl p-6 max-w-md w-full text-center shadow-2xl space-y-4">
+            <div class="w-20 h-20 bg-amber-500/20 border-2 border-amber-400 rounded-full flex items-center justify-center mx-auto text-amber-400 text-4xl animate-bounce">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 class="text-2xl font-black text-amber-400">🎉 전설의 광부 등극! 🎉</h2>
+            <p class="text-sm text-slate-300">
+                축하합니다! 총 <span class="text-amber-300 font-bold">10¹⁸ G (100경 G)</span>의 골드를 달성하여 지상 최고의 광산 재벌이 되었습니다!
+            </p>
+            <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-400">
+                지하 12층 전설의 원석들을 모두 정복하셨습니다.
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button id="continueAfterEndingBtn" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs transition-all">
+                    계속 플레이하기
+                </button>
+                <button id="restartEndingBtn" class="flex-1 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition-all">
+                    새 게임 시작
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Reset Confirmation Modal -->
+    <div id="resetConfirmModal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl space-y-4">
+            <div class="w-14 h-14 bg-red-500/20 border border-red-500/40 rounded-full flex items-center justify-center mx-auto text-red-400 text-2xl">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-100">데이터 초기화</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+                정말로 모든 진행 데이터(골드, 도감, 강화 내역)를 삭제하고 초기화하시겠습니까?<br>이 작업은 되돌릴 수 없습니다.
+            </p>
+            <div class="flex gap-2 pt-2">
+                <button id="cancelResetBtn" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-all">
+                    취소
+                </button>
+                <button id="confirmResetBtn" class="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs transition-all">
+                    초기화 실행
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ore Detail Modal -->
+    <div id="oreDetailModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-xs w-full text-center shadow-2xl space-y-3 relative">
+            <button id="closeOreDetailBtn" class="absolute top-3 right-3 text-slate-400 hover:text-slate-200 text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div id="oreDetailIconBox" class="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto shadow-inner border border-slate-700/50">
+                <i id="oreDetailIcon" class="fa-solid fa-gem"></i>
+            </div>
+            <h3 id="oreDetailName" class="text-base font-bold text-slate-100">원석 이름</h3>
+            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 text-xs space-y-1.5 text-left">
+                <div class="flex justify-between">
+                    <span class="text-slate-400">등장 위치:</span>
+                    <span id="oreDetailFloor" class="font-bold text-amber-400">지하 1층</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">기본 판매가:</span>
+                    <span id="oreDetailPrice" class="font-bold text-emerald-400">0 G</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">수집 상태:</span>
+                    <span id="oreDetailStatus" class="font-bold text-indigo-400">발견됨</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Game Core Logic -->
+    <script>
+        const ORES_DATA = [
+            // Floor 1
+            { id: 1, floor: 1, name: "돌", price: 1, color: "#9ca3af", icon: "fa-cube" },
+            { id: 2, floor: 1, name: "석탄", price: 5, color: "#374151", icon: "fa-dumpster" },
+            { id: 3, floor: 1, name: "구리", price: 12, color: "#b45309", icon: "fa-gem" },
+            { id: 4, floor: 1, name: "철", price: 25, color: "#6b7280", icon: "fa-shield" },
+            { id: 5, floor: 1, name: "황철석", price: 45, color: "#eab308", icon: "fa-cubes" },
+            { id: 6, floor: 1, name: "은", price: 80, color: "#e2e8f0", icon: "fa-coins" },
+
+            // Floor 2
+            { id: 7, floor: 2, name: "호박", price: 150, color: "#f59e0b", icon: "fa-sun" },
+            { id: 8, floor: 2, name: "비취", price: 250, color: "#10b981", icon: "fa-leaf" },
+            { id: 9, floor: 2, name: "청라피스", price: 400, color: "#2563eb", icon: "fa-water" },
+            { id: 10, floor: 2, name: "자수정", price: 650, color: "#a855f7", icon: "fa-gem" },
+            { id: 11, floor: 2, name: "가넷", price: 1000, color: "#991b1b", icon: "fa-fire" },
+            { id: 12, floor: 2, name: "금", price: 1600, color: "#facc15", icon: "fa-crown" },
+
+            // Floor 3
+            { id: 13, floor: 3, name: "페리도트", price: 2500, color: "#84cc16", icon: "fa-gem" },
+            { id: 14, floor: 3, name: "토파즈", price: 4000, color: "#fbbf24", icon: "fa-certificate" },
+            { id: 15, floor: 3, name: "아쿠아마린", price: 6500, color: "#38bdf8", icon: "fa-droplet" },
+            { id: 16, floor: 3, name: "사파이어", price: 10000, color: "#1d4ed8", icon: "fa-gem" },
+            { id: 17, floor: 3, name: "루비", price: 16000, color: "#dc2626", icon: "fa-heart" },
+            { id: 18, floor: 3, name: "에메랄드", price: 25000, color: "#059669", icon: "fa-gem" },
+
+            // Floor 4
+            { id: 19, floor: 4, name: "탄자나이트", price: 40000, color: "#6366f1", icon: "fa-atom" },
+            { id: 20, floor: 4, name: "핑크 다이아", price: 65000, color: "#ec4899", icon: "fa-gem" },
+            { id: 21, floor: 4, name: "다이아몬드", price: 100000, color: "#67e8f9", icon: "fa-gem" },
+            { id: 22, floor: 4, name: "알렉산드라이트", price: 160000, color: "#8b5cf6", icon: "fa-eye" },
+            { id: 23, floor: 4, name: "오팔", price: 250000, color: "#f472b6", icon: "fa-star" },
+            { id: 24, floor: 4, name: "블랙 다이아", price: 400000, color: "#1e293b", icon: "fa-gem" },
+
+            // Floor 5
+            { id: 25, floor: 5, name: "티타늄", price: 650000, color: "#94a3b8", icon: "fa-shield-halved" },
+            { id: 26, floor: 5, name: "백금", price: 1000000, color: "#cbd5e1", icon: "fa-circle" },
+            { id: 27, floor: 5, name: "팔라듐", price: 1600000, color: "#38bdf8", icon: "fa-bolt" },
+            { id: 28, floor: 5, name: "오스뮴", price: 2500000, color: "#3b82f6", icon: "fa-cube" },
+            { id: 29, floor: 5, name: "비스무트", price: 4000000, color: "#d946ef", icon: "fa-shapes" },
+            { id: 30, floor: 5, name: "이리듐", price: 6500000, color: "#a855f7", icon: "fa-burst" },
+
+            // Floor 6
+            { id: 31, floor: 6, name: "우라늄", price: 10000000, color: "#22c55e", icon: "fa-radiation" },
+            { id: 32, floor: 6, name: "플루토늄", price: 16000000, color: "#16a34a", icon: "fa-biohazard" },
+            { id: 33, floor: 6, name: "스타라이트", price: 25000000, color: "#fef08a", icon: "fa-wand-magic-sparkles" },
+            { id: 34, floor: 6, name: "메테오라이트", price: 40000000, color: "#ea580c", icon: "fa-meteor" },
+            { id: 35, floor: 6, name: "솔라라이트", price: 65000000, color: "#f97316", icon: "fa-sun" },
+            { id: 36, floor: 6, name: "루나라이트", price: 100000000, color: "#38bdf8", icon: "fa-moon" },
+
+            // Floor 7
+            { id: 37, floor: 7, name: "플라즈마석", price: 160000000, color: "#c084fc", icon: "fa-bolt-lightning" },
+            { id: 38, floor: 7, name: "암흑석", price: 250000000, color: "#0f172a", icon: "fa-circle-dot" },
+            { id: 39, floor: 7, name: "퀀텀 오르", price: 400000000, color: "#06b6d4", icon: "fa-atom" },
+            { id: 40, floor: 7, name: "시공의 결정", price: 650000000, color: "#818cf8", icon: "fa-hourglass" },
+            { id: 41, floor: 7, name: "네뷸라 파편", price: 1000000000, color: "#e879f9", icon: "fa-cloud" },
+            { id: 42, floor: 7, name: "갤럭시 크리스탈", price: 1600000000, color: "#a855f7", icon: "fa-compact-disc" },
+
+            // Floor 8
+            { id: 43, floor: 8, name: "보이드스톤", price: 2500000000, color: "#312e81", icon: "fa-circle-notch" },
+            { id: 44, floor: 8, name: "아스트랄 젬", price: 4000000000, color: "#f43f5e", icon: "fa-sparkles" },
+            { id: 45, floor: 8, name: "하이페리온", price: 6500000000, color: "#eab308", icon: "fa-sun-plant-wilt" },
+            { id: 46, floor: 8, name: "코스믹 오라", price: 10000000000, color: "#06b6d4", icon: "fa-ring" },
+            { id: 47, floor: 8, name: "에테르 결정", price: 16000000000, color: "#67e8f9", icon: "fa-snowflake" },
+            { id: 48, floor: 8, name: "크로노스 잼", price: 25000000000, color: "#fb7185", icon: "fa-clock" },
+
+            // Floor 9
+            { id: 49, floor: 9, name: "타이탄의 심장", price: 40000000000, color: "#b91c1c", icon: "fa-heart-pulse" },
+            { id: 50, floor: 9, name: "셀레스티얼 오르", price: 65000000000, color: "#38bdf8", icon: "fa-feather" },
+            { id: 51, floor: 9, name: "오리하르콘", price: 100000000000, color: "#10b981", icon: "fa-shield-cat" },
+            { id: 52, floor: 9, name: "아다만티움", price: 160000000000, color: "#475569", icon: "fa-cube" },
+            { id: 53, floor: 9, name: "미스릴", price: 250000000000, color: "#7dd3fc", icon: "fa-feather-pointed" },
+            { id: 54, floor: 9, name: "비브라늄", price: 400000000000, color: "#818cf8", icon: "fa-diagram-project" },
+
+            // Floor 10
+            { id: 55, floor: 10, name: "불멸의 정수", price: 650000000000, color: "#facc15", icon: "fa-ankh" },
+            { id: 56, floor: 10, name: "신화의 비석", price: 1000000000000, color: "#d97706", icon: "fa-monument" },
+            { id: 57, floor: 10, name: "혼돈의 핵", price: 1600000000000, color: "#dc2626", icon: "fa-explosion" },
+            { id: 58, floor: 10, name: "질서의 결정", price: 2500000000000, color: "#2563eb", icon: "fa-scale-balanced" },
+            { id: 59, floor: 10, name: "창세의 파편", price: 4000000000000, color: "#059669", icon: "fa-infinity" },
+            { id: 60, floor: 10, name: "종말의 원석", price: 6500000000000, color: "#7f1d1d", icon: "fa-skull" },
+
+            // Floor 11
+            { id: 61, floor: 11, name: "신의 눈물", price: 10000000000000, color: "#60a5fa", icon: "fa-eye-dropper" },
+            { id: 62, floor: 11, name: "은하의 혼", price: 16000000000000, color: "#c084fc", icon: "fa-ghost" },
+            { id: 63, floor: 11, name: "영원의 심장", price: 25000000000000, color: "#f43f5e", icon: "fa-heart" },
+            { id: 64, floor: 11, name: "무한의 결정", price: 40000000000000, color: "#a855f7", icon: "fa-infinity" },
+            { id: 65, floor: 11, name: "차원의 균열", price: 65000000000000, color: "#22d3ee", icon: "fa-tornado" },
+            { id: 66, floor: 11, name: "절대자의 사리", price: 100000000000000, color: "#fef08a", icon: "fa-place-of-worship" },
+
+            // Floor 12
+            { id: 67, floor: 12, name: "아포칼립스 젬", price: 160000000000000, color: "#991b1b", icon: "fa-fire-flame-curved" },
+            { id: 68, floor: 12, name: "빅뱅 정수", price: 250000000000000, color: "#f97316", icon: "fa-sun" },
+            { id: 69, floor: 12, name: "오메가 크리스탈", price: 400000000000000, color: "#a855f7", icon: "fa-gem" },
+            { id: 70, floor: 12, name: "신성한 원초석", price: 650000000000000, color: "#fef08a", icon: "fa-cross" },
+            { id: 71, floor: 12, name: "초월자의 눈", price: 1000000000000000, color: "#22d3ee", icon: "fa-eye" },
+            { id: 72, floor: 12, name: "전설의 기원석", price: 2500000000000000, color: "#f43f5e", icon: "fa-dragon" }
+        ];
+
+        const FLOOR_UNLOCK_COSTS = [
+            0, 300, 2500, 18000, 120000, 850000, 6000000, 45000000, 320000000, 2400000000, 18000000000, 150000000000
+        ];
+
+        const PICKAXE_UPGRADES = [
+            { name: "나무 곡괭이", power: 1, cost: 50, color: "#78350f" },
+            { name: "돌 곡괭이", power: 3, cost: 300, color: "#64748b" },
+            { name: "구리 곡괭이", power: 8, cost: 1500, color: "#b45309" },
+            { name: "철 곡괭이", power: 22, cost: 8000, color: "#94a3b8" },
+            { name: "강철 곡괭이", power: 60, cost: 45000, color: "#cbd5e1" },
+            { name: "은 곡괭이", power: 180, cost: 250000, color: "#e2e8f0" },
+            { name: "금 곡괭이", power: 500, cost: 1500000, color: "#eab308" },
+            { name: "자수정 곡괭이", power: 1500, cost: 10000000, color: "#a855f7" },
+            { name: "에메랄드 곡괭이", power: 4500, cost: 70000000, color: "#10b981" },
+            { name: "다이아몬드 곡괭이", power: 14000, cost: 500000000, color: "#38bdf8" },
+            { name: "티타늄 드릴", power: 45000, cost: 4000000000, color: "#64748b" },
+            { name: "플라즈마 커터", power: 150000, cost: 30000000000, color: "#c084fc" },
+            { name: "네뷸라 레이저", power: 500000, cost: 250000000000, color: "#f472b6" },
+            { name: "신화의 파괴자", power: 1800000, cost: 2000000000000, color: "#fbbf24" },
+            { name: "전설의 신기", power: 6000000, cost: 0, color: "#f43f5e" }
+        ];
+
+        const WORKER_UPGRADES = [
+            { level: 0, name: "미고용", cost: 300, interval: 0, powerRatio: 0 },
+            { level: 1, name: "초보 알바", cost: 1500, interval: 1500, powerRatio: 0.5 },
+            { level: 2, name: "견습 알바", cost: 8000, interval: 1200, powerRatio: 0.7 },
+            { level: 3, name: "숙련 알바", cost: 45000, interval: 1000, powerRatio: 1.0 },
+            { level: 4, name: "베테랑 알바", cost: 250000, interval: 800, powerRatio: 1.2 },
+            { level: 5, name: "전문 채굴꾼", cost: 1500000, interval: 600, powerRatio: 1.5 },
+            { level: 6, name: "수석 채굴꾼", cost: 10000000, interval: 450, powerRatio: 1.8 },
+            { level: 7, name: "발굴 기장", cost: 70000000, interval: 350, powerRatio: 2.2 },
+            { level: 8, name: "광산 관리자", cost: 500000000, interval: 250, powerRatio: 2.8 },
+            { level: 9, name: "전설의 해머", cost: 4000000000, interval: 180, powerRatio: 3.5 },
+            { level: 10, name: "광산의 신", cost: 0, interval: 100, powerRatio: 5.0 }
+        ];
+
+        // Audio Synthesizer Engine
+        let audioCtx = null;
+        let soundEnabled = true;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'hit') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(140, now);
+                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.08);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'break') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+                    gain.gain.setValueAtTime(0.4, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'gold') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(800, now);
+                    osc.frequency.setValueAtTime(1200, now + 0.06);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
+                } else if (type === 'rare') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.08);
+                    osc.frequency.setValueAtTime(783.99, now + 0.16);
+                    osc.frequency.setValueAtTime(1046.50, now + 0.24);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'upgrade') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.linearRampToValueAtTime(880, now + 0.15);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                }
+            } catch (e) {
+                // Ignore audio autoplay restrictions gracefully
+            }
+        }
+
+        let gameState = {
+            gold: 0,
+            tradeStones: 0,
+            encyclopediaPoints: 0,
+            currentFloor: 1,
+            maxUnlockedFloor: 1,
+            pickaxeLevel: 0,
+            workerLevel: 0,
+            discountLevel: 0,
+            buffGoldLevel: 0,
+            buffPowerLevel: 0,
+            discoveredOres: new Set([1]),
+            mineKey: "Space",
+            keyDisplayName: "Space",
+            hasCleared: false
+        };
+
+        let currentBlock = {
+            type: "NORMAL",
+            maxHp: 10,
+            hp: 10,
+            revealedOre: null,
+            x: 480,
+            y: 170
+        };
+
+        let activeFloorFilter = "all";
+        let workerTimer = null;
+        let isKeyDown = false;
+        let pickaxeAngle = 0;
+        let sparks = [];
+        let hitEffectText = null;
+
+        const canvas = document.getElementById("mineCanvas");
+        const ctx = canvas.getContext("2d");
+
+        function formatNumber(num) {
+            if (num >= 1e20) return (num / 1e20).toFixed(2) + "해";
+            if (num >= 1e16) return (num / 1e16).toFixed(2) + "경";
+            if (num >= 1e12) return (num / 1e12).toFixed(2) + "조";
+            if (num >= 1e8) return (num / 1e8).toFixed(2) + "억";
+            if (num >= 1e4) return (num / 1e4).toFixed(1) + "만";
+            return num.toLocaleString();
+        }
+
+        function checkEnding() {
+            if (gameState.gold >= 1e18 && !gameState.hasCleared) {
+                gameState.hasCleared = true;
+                saveData();
+                document.getElementById("endingModal").classList.remove("hidden");
+                playSound('rare');
+            }
+        }
+
+        function renderEncyclopediaFilters() {
+            const container = document.getElementById("floorFilterContainer");
+            let html = `<button class="filter-btn ${activeFloorFilter === 'all' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300'} px-3 py-1 rounded-lg text-xs shrink-0" onclick="setFloorFilter('all')">전체</button>`;
+            for (let f = 1; f <= 12; f++) {
+                const isActive = activeFloorFilter === f;
+                html += `<button class="filter-btn ${isActive ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-300'} px-3 py-1 rounded-lg text-xs shrink-0" onclick="setFloorFilter(${f})">${f}층</button>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function setFloorFilter(f) {
+            activeFloorFilter = f;
+            renderEncyclopediaFilters();
+            renderEncyclopedia();
+        }
+
+        function renderEncyclopedia() {
+            const grid = document.getElementById("encyclopediaGrid");
+            grid.innerHTML = "";
+
+            const filtered = activeFloorFilter === "all" 
+                ? ORES_DATA 
+                : ORES_DATA.filter(o => o.floor === Number(activeFloorFilter));
+
+            filtered.forEach(ore => {
+                const isDiscovered = gameState.discoveredOres.has(ore.id);
+                const card = document.createElement("div");
+                card.className = `p-2.5 rounded-xl border flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
+                    isDiscovered 
+                        ? "bg-slate-900 border-slate-700 hover:border-amber-500/50 hover:scale-105" 
+                        : "bg-slate-950/60 border-slate-900 opacity-50"
+                }`;
+
+                card.onclick = () => showOreDetail(ore);
+
+                card.innerHTML = `
+                    <div class="w-10 h-10 rounded-lg flex items-center justify-center text-xl mb-1" style="background-color: ${isDiscovered ? ore.color + '20' : '#1e293b'}; color: ${isDiscovered ? ore.color : '#64748b'};">
+                        <i class="fa-solid ${isDiscovered ? ore.icon : 'fa-question'}"></i>
+                    </div>
+                    <div class="text-[11px] font-bold ${isDiscovered ? 'text-slate-200' : 'text-slate-500'} truncate w-full">
+                        ${isDiscovered ? ore.name : '???'}
+                    </div>
+                    <div class="text-[10px] ${isDiscovered ? 'text-amber-400' : 'text-slate-600'} font-mono mt-0.5">
+                        ${isDiscovered ? formatNumber(ore.price) + ' G' : '미발견'}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function showOreDetail(ore) {
+            const isDiscovered = gameState.discoveredOres.has(ore.id);
+            const modal = document.getElementById("oreDetailModal");
+            const iconBox = document.getElementById("oreDetailIconBox");
+            const icon = document.getElementById("oreDetailIcon");
+
+            iconBox.style.backgroundColor = isDiscovered ? ore.color + '25' : '#1e293b';
+            iconBox.style.borderColor = isDiscovered ? ore.color : '#334155';
+            icon.className = `fa-solid ${isDiscovered ? ore.icon : 'fa-question'}`;
+            icon.style.color = isDiscovered ? ore.color : '#64748b';
+
+            document.getElementById("oreDetailName").innerText = isDiscovered ? ore.name : "??? (미발견 원석)";
+            document.getElementById("oreDetailFloor").innerText = `지하 ${ore.floor}층`;
+            document.getElementById("oreDetailPrice").innerText = isDiscovered ? `${formatNumber(ore.price)} G` : "???";
+            document.getElementById("oreDetailStatus").innerText = isDiscovered ? "수집 완료" : "미발견";
+            document.getElementById("oreDetailStatus").className = `font-bold ${isDiscovered ? 'text-emerald-400' : 'text-slate-500'}`;
+
+            modal.classList.remove("hidden");
+        }
+
+        function updateUI() {
+            document.getElementById("goldDisplay").innerText = formatNumber(gameState.gold) + " G";
+            document.getElementById("tradeStoneDisplay").innerText = gameState.tradeStones + "개";
+            document.getElementById("encyclopediaPointDisplay").innerText = gameState.encyclopediaPoints + " P";
+            document.getElementById("floorHeaderDisplay").innerText = gameState.currentFloor + "층";
+            document.getElementById("tunnelFloorText").innerText = `B${gameState.currentFloor}F 지하 ${gameState.currentFloor}층`;
+
+            const curPick = PICKAXE_UPGRADES[gameState.pickaxeLevel];
+            let actualPower = Math.floor(curPick.power * (1 + gameState.buffPowerLevel * 0.3));
+            document.getElementById("pickaxeName").innerText = curPick.name;
+            document.getElementById("pickaxeLevelTag").innerText = `Lv.${gameState.pickaxeLevel + 1}`;
+            document.getElementById("pickaxePowerText").innerText = formatNumber(actualPower);
+
+            const nextPick = PICKAXE_UPGRADES[gameState.pickaxeLevel + 1];
+            const upgradeBtn = document.getElementById("upgradePickaxeBtn");
+            if (nextPick && nextPick.cost > 0) {
+                document.getElementById("pickaxeCostText").innerText = formatNumber(nextPick.cost) + " G";
+                upgradeBtn.disabled = gameState.gold < nextPick.cost;
+                upgradeBtn.classList.toggle("opacity-50", gameState.gold < nextPick.cost);
+            } else {
+                document.getElementById("pickaxeCostText").innerText = "MAX";
+                upgradeBtn.disabled = true;
+                upgradeBtn.classList.add("opacity-50");
+            }
+
+            const curWorker = WORKER_UPGRADES[gameState.workerLevel];
+            const nextWorker = WORKER_UPGRADES[gameState.workerLevel + 1];
+            const upgradeWorkerBtn = document.getElementById("upgradeWorkerBtn");
+
+            document.getElementById("workerLevelTag").innerText = gameState.workerLevel === 0 ? "미고용" : `Lv.${gameState.workerLevel} (${curWorker.name})`;
+            document.getElementById("workerStatText").innerText = gameState.workerLevel === 0 
+                ? "없음" 
+                : `${(curWorker.interval / 1000).toFixed(1)}초당 ${Math.floor(actualPower * curWorker.powerRatio)} 채굴력`;
+
+            if (nextWorker && curWorker.cost > 0) {
+                document.getElementById("workerCostText").innerText = formatNumber(curWorker.cost) + " G";
+                upgradeWorkerBtn.disabled = gameState.gold < curWorker.cost;
+                upgradeWorkerBtn.classList.toggle("opacity-50", gameState.gold < curWorker.cost);
+            } else {
+                document.getElementById("workerCostText").innerText = "MAX";
+                upgradeWorkerBtn.disabled = true;
+                upgradeWorkerBtn.classList.add("opacity-50");
+            }
+
+            const discountPct = gameState.discountLevel * 5;
+            document.getElementById("discountLevelTag").innerText = `${discountPct}% 할인 (Lv.${gameState.discountLevel})`;
+            const upgradeDiscountBtn = document.getElementById("upgradeDiscountBtn");
+            upgradeDiscountBtn.disabled = gameState.encyclopediaPoints < 6 || gameState.discountLevel >= 10;
+            upgradeDiscountBtn.classList.toggle("opacity-50", gameState.encyclopediaPoints < 6 || gameState.discountLevel >= 10);
+
+            document.getElementById("buffGoldText").innerText = `+${gameState.buffGoldLevel * 20}%`;
+            document.getElementById("buffPowerText").innerText = `+${gameState.buffPowerLevel * 30}%`;
+            
+            document.getElementById("buyBuffGoldBtn").disabled = gameState.tradeStones < 2;
+            document.getElementById("buyBuffGoldBtn").classList.toggle("opacity-50", gameState.tradeStones < 2);
+            document.getElementById("buyBuffPowerBtn").disabled = gameState.tradeStones < 3;
+            document.getElementById("buyBuffPowerBtn").classList.toggle("opacity-50", gameState.tradeStones < 3);
+
+            const count = gameState.discoveredOres.size;
+            document.getElementById("encyclopediaProgress").innerText = `${count} / 72`;
+            document.getElementById("encyclopediaPercent").innerText = `${Math.floor((count / 72) * 100)}%`;
+
+            document.getElementById("keyBindHint").innerText = `단축키: [${gameState.keyDisplayName}]`;
+            document.getElementById("currentKeyText").innerText = gameState.keyDisplayName;
+
+            renderFloors();
+            restartWorkerLoop();
+        }
+
+        function updateLog(text, colorClass = "text-slate-200") {
+            const logEl = document.getElementById("latestLogText");
+            if (logEl) {
+                logEl.innerHTML = `<span class="${colorClass}">${text}</span>`;
+            }
+        }
+
+        function getRandomOreForFloor(currentFloor) {
+            const availableNonStone = ORES_DATA.filter(o => o.id !== 1 && o.floor <= currentFloor);
+            if (availableNonStone.length === 0) return ORES_DATA[0];
+            const randIdx = Math.floor(Math.random() * availableNonStone.length);
+            return availableNonStone[randIdx];
+        }
+
+        function generateNewBlock() {
+            const f = gameState.currentFloor;
+            const randType = Math.random();
+            let blockType = "NORMAL";
+            let baseHp = 10;
+
+            if (randType < 0.20) {
+                blockType = "CRACKED";
+                baseHp = 5;
+            } else if (randType < 0.40) {
+                blockType = "HARD";
+                baseHp = 35;
+            } else {
+                blockType = "NORMAL";
+                baseHp = 10;
+            }
+
+            const floorMultiplier = Math.pow(1.7, f - 1);
+            const calculatedHp = Math.round(baseHp * floorMultiplier);
+
+            let isStone = false;
+            const oreRand = Math.random();
+
+            if (blockType === "HARD") {
+                if (oreRand < 0.40) isStone = true;
+            } else if (blockType === "CRACKED") {
+                if (oreRand < 0.90) isStone = true;
+            } else {
+                if (oreRand < 0.85) isStone = true;
+            }
+
+            const chosenOre = isStone ? ORES_DATA[0] : getRandomOreForFloor(f);
+
+            currentBlock = {
+                type: blockType,
+                maxHp: calculatedHp,
+                hp: calculatedHp,
+                revealedOre: chosenOre,
+                x: 480,
+                y: 170
+            };
+
+            updateBlockHpUI();
+        }
+
+        function executeMineHit(customDamage) {
+            if (!currentBlock || currentBlock.hp <= 0) return;
+
+            let damage = customDamage;
+            if (damage === undefined) {
+                const basePower = PICKAXE_UPGRADES[gameState.pickaxeLevel].power;
+                damage = Math.floor(basePower * (1 + gameState.buffPowerLevel * 0.3));
+                playSound('hit');
+            }
+
+            pickaxeAngle = 50;
+
+            currentBlock.hp = Math.max(0, currentBlock.hp - damage);
+
+            // Add mining shake effect to canvas container
+            const box = document.getElementById("canvasBox");
+            box.classList.remove("mining-shake");
+            void box.offsetWidth;
+            box.classList.add("mining-shake");
+
+            // Particle sparks
+            for (let i = 0; i < 6; i++) {
+                sparks.push({
+                    x: currentBlock.x + (Math.random() * 40 - 20),
+                    y: currentBlock.y + (Math.random() * 40 - 20),
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6 - 2,
+                    radius: Math.random() * 3 + 2,
+                    color: Math.random() > 0.5 ? "#f59e0b" : "#e2e8f0",
+                    alpha: 1.0
+                });
+            }
+
+            // Damage text
+            hitEffectText = {
+                text: `-${formatNumber(damage)}`,
+                x: currentBlock.x + (Math.random() * 20 - 10),
+                y: currentBlock.y - 10,
+                color: "#facc15",
+                alpha: 1.0
+            };
+
+            // 0.05% Rare Trade Stone Drop
+            if (Math.random() < 0.0005) {
+                gameState.tradeStones += 1;
+                playSound('rare');
+                updateLog("💎 [거래석 발견!] 0.05% 확률의 희귀 거래석 1개를 획득했습니다!", "text-cyan-400 font-bold");
+            }
+
+            updateBlockHpUI();
+
+            if (currentBlock.hp <= 0) {
+                playSound('break');
+                const ore = currentBlock.revealedOre;
+                const isFirstDiscovery = !gameState.discoveredOres.has(ore.id);
+
+                if (isFirstDiscovery) {
+                    gameState.discoveredOres.add(ore.id);
+                    gameState.encyclopediaPoints += 1;
+                    playSound('rare');
+                    updateLog(`✨ [신규 원석 도감 수집!] '${ore.name}'을(를) 최초 발견하여 도감에 등록했습니다! (도감 포인트 +1 P)`, "text-emerald-400 font-bold");
+                    renderEncyclopedia();
+                } else {
+                    const sellPrice = Math.floor(ore.price * (1 + gameState.buffGoldLevel * 0.2));
+                    gameState.gold += sellPrice;
+                    playSound('gold');
+                    updateLog(`⛏️ [채굴 완료] '${ore.name}'을(를) 채굴하여 ${formatNumber(sellPrice)} G에 자동 판매했습니다.`, "text-amber-300");
+                }
+
+                saveData();
+                updateUI();
+                checkEnding();
+
+                setTimeout(() => {
+                    generateNewBlock();
+                }, 100);
+            }
+        }
+
+        function updateBlockHpUI() {
+            const blockHpBar = document.getElementById("blockHpBar");
+            const blockHpLabel = document.getElementById("blockHpLabel");
+            const blockTypeLabel = document.getElementById("blockTypeLabel");
+
+            const pct = Math.max(0, (currentBlock.hp / currentBlock.maxHp) * 100);
+            blockHpBar.style.width = pct + "%";
+            blockHpLabel.innerText = `${currentBlock.hp} / ${currentBlock.maxHp}`;
+
+            if (currentBlock.type === "HARD") {
+                blockTypeLabel.innerText = "단단한 회색 돌 [?]";
+                blockTypeLabel.className = "font-bold text-amber-400";
+            } else if (currentBlock.type === "CRACKED") {
+                blockTypeLabel.innerText = "균열된 회색 돌 [?]";
+                blockTypeLabel.className = "font-bold text-cyan-400";
+            } else {
+                blockTypeLabel.innerText = "회색 돌 [?]";
+                blockTypeLabel.className = "font-bold text-slate-300";
+            }
+        }
+
+        function selectFloor(f) {
+            if (f <= gameState.maxUnlockedFloor) {
+                gameState.currentFloor = f;
+                saveData();
+                updateUI();
+                checkEnding();
+
+                setTimeout(() => {
+                    generateNewBlock();
+                }, 100);
+            }
+        }
+
+        function unlockFloor(f) {
+            const discountMultiplier = 1 - (gameState.discountLevel * 0.05);
+            const cost = Math.floor(FLOOR_UNLOCK_COSTS[f - 1] * discountMultiplier);
+
+            if (gameState.gold >= cost) {
+                gameState.gold -= cost;
+                gameState.maxUnlockedFloor = Math.max(gameState.maxUnlockedFloor, f);
+                gameState.currentFloor = f;
+                playSound('upgrade');
+                saveData();
+                generateNewBlock();
+                updateUI();
+                updateLog(`🔓 [층 해금 완료!] 지하 ${f}층이 해금되었습니다.`, "text-amber-400 font-bold");
+            }
+        }
+
+        function renderFloors() {
+            const list = document.getElementById("floorsList");
+            list.innerHTML = "";
+
+            const discountMultiplier = 1 - (gameState.discountLevel * 0.05);
+
+            for (let f = 1; f <= 12; f++) {
+                const isUnlocked = f <= gameState.maxUnlockedFloor;
+                const isCurrent = f === gameState.currentFloor;
+                const baseCost = FLOOR_UNLOCK_COSTS[f - 1];
+                const finalCost = Math.floor(baseCost * discountMultiplier);
+
+                const floorCard = document.createElement("div");
+                floorCard.className = `p-3 rounded-xl border flex items-center justify-between ${
+                    isCurrent 
+                        ? "bg-amber-950/30 border-amber-500/60" 
+                        : isUnlocked 
+                        ? "bg-slate-950 border-slate-800" 
+                        : "bg-slate-950/40 border-slate-900 opacity-70"
+                }`;
+
+                let btnHtml = "";
+                if (isUnlocked) {
+                    btnHtml = `<button onclick="selectFloor(${f})" class="px-3 py-1.5 ${isCurrent ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'} rounded-lg text-xs font-bold transition-all">
+                        ${isCurrent ? '탐사 중' : '이동하기'}
+                    </button>`;
+                } else {
+                    const canAfford = gameState.gold >= finalCost;
+                    btnHtml = `<button onclick="unlockFloor(${f})" ${!canAfford ? 'disabled' : ''} class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 font-bold text-white rounded-lg text-xs transition-all">
+                        해금 (${formatNumber(finalCost)} G)
+                    </button>`;
+                }
+
+                const sampleOre = ORES_DATA.find(o => o.floor === f);
+
+                floorCard.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center font-bold text-amber-400 text-sm">
+                            ${f}F
+                        </div>
+                        <div>
+                            <div class="font-bold text-sm text-slate-200">지하 ${f}층</div>
+                            <div class="text-[11px] text-slate-400">대표 원석: ${isUnlocked ? sampleOre.name : '???'} 등</div>
+                        </div>
+                    </div>
+                    <div>${btnHtml}</div>
+                `;
+
+                list.appendChild(floorCard);
+            }
+        }
+
+        function restartWorkerLoop() {
+            if (workerTimer) clearInterval(workerTimer);
+
+            if (gameState.workerLevel > 0) {
+                const w = WORKER_UPGRADES[gameState.workerLevel];
+                workerTimer = setInterval(() => {
+                    let pickPower = PICKAXE_UPGRADES[gameState.pickaxeLevel].power;
+                    let actualPower = Math.floor(pickPower * (1 + gameState.buffPowerLevel * 0.3));
+                    let workerDamage = Math.max(1, Math.floor(actualPower * w.powerRatio));
+                    executeMineHit(workerDamage);
+                }, w.interval);
+            }
+        }
+
+        function loadSavedData() {
+            try {
+                const saved = localStorage.getItem("miner_sim_save_v1");
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    gameState.gold = parsed.gold || 0;
+                    gameState.tradeStones = parsed.tradeStones || 0;
+                    gameState.encyclopediaPoints = parsed.encyclopediaPoints || 0;
+                    gameState.currentFloor = parsed.currentFloor || 1;
+                    gameState.maxUnlockedFloor = parsed.maxUnlockedFloor || 1;
+                    gameState.pickaxeLevel = parsed.pickaxeLevel || 0;
+                    gameState.workerLevel = parsed.workerLevel || 0;
+                    gameState.discountLevel = parsed.discountLevel || 0;
+                    gameState.buffGoldLevel = parsed.buffGoldLevel || 0;
+                    gameState.buffPowerLevel = parsed.buffPowerLevel || 0;
+                    gameState.discoveredOres = new Set(parsed.discoveredOres || [1]);
+                    gameState.mineKey = parsed.mineKey || "Space";
+                    gameState.keyDisplayName = parsed.keyDisplayName || "Space";
+                    gameState.hasCleared = parsed.hasCleared || false;
+                }
+            } catch(e) {
+                console.error("Save load error:", e);
+            }
+        }
+
+        function saveData() {
+            const dataToSave = {
+                gold: gameState.gold,
+                tradeStones: gameState.tradeStones,
+                encyclopediaPoints: gameState.encyclopediaPoints,
+                currentFloor: gameState.currentFloor,
+                maxUnlockedFloor: gameState.maxUnlockedFloor,
+                pickaxeLevel: gameState.pickaxeLevel,
+                workerLevel: gameState.workerLevel,
+                discountLevel: gameState.discountLevel,
+                buffGoldLevel: gameState.buffGoldLevel,
+                buffPowerLevel: gameState.buffPowerLevel,
+                discoveredOres: Array.from(gameState.discoveredOres),
+                mineKey: gameState.mineKey,
+                keyDisplayName: gameState.keyDisplayName,
+                hasCleared: gameState.hasCleared
+            };
+            localStorage.setItem("miner_sim_save_v1", JSON.stringify(dataToSave));
+        }
+
+        function drawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Tunnel Background
+            const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            grad.addColorStop(0, "#0b1329");
+            grad.addColorStop(0.5, "#182238");
+            grad.addColorStop(1, "#080c18");
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Shaft ceiling and ground
+            ctx.fillStyle = "#1e293b";
+            ctx.fillRect(0, 0, canvas.width, 35);
+            ctx.fillRect(0, canvas.height - 35, canvas.width, 35);
+
+            // Shaft support beams
+            ctx.fillStyle = "#334155";
+            ctx.fillRect(100, 0, 20, canvas.height);
+            ctx.fillRect(320, 0, 20, canvas.height);
+            ctx.fillRect(620, 0, 20, canvas.height);
+
+            // Draw miner
+            ctx.save();
+            ctx.translate(180, 190);
+
+            // Miner Body
+            ctx.fillStyle = "#2563eb";
+            ctx.fillRect(-20, -10, 40, 50);
+
+            // Miner Head & Helmet
+            ctx.fillStyle = "#facc15";
+            ctx.beginPath();
+            ctx.arc(0, -30, 22, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Helmet Lamp
+            ctx.fillStyle = "#fef08a";
+            ctx.beginPath();
+            ctx.arc(15, -30, 7, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Dynamic Pickaxe rendering
+            ctx.save();
+            ctx.translate(10, -10);
+            if (pickaxeAngle > 0) {
+                ctx.rotate((pickaxeAngle * Math.PI) / 180);
+                pickaxeAngle -= 6;
+            }
+            
+            const pickColor = PICKAXE_UPGRADES[gameState.pickaxeLevel].color;
+            ctx.fillStyle = "#78350f";
+            ctx.fillRect(0, -5, 50, 10);
+            ctx.fillStyle = pickColor;
+            ctx.beginPath();
+            ctx.arc(50, 0, 14, Math.PI * 0.5, Math.PI * 1.5);
+            ctx.fill();
+            ctx.restore();
+
+            ctx.restore();
+
+            // Draw target rock
+            if (currentBlock.hp > 0) {
+                ctx.save();
+                ctx.translate(currentBlock.x, currentBlock.y);
+
+                // Rock Shadow
+                ctx.fillStyle = "rgba(0,0,0,0.4)";
+                ctx.beginPath();
+                ctx.ellipse(0, 50, 50, 15, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Rock Shape
+                ctx.fillStyle = currentBlock.type === "HARD" ? "#334155" : currentBlock.type === "CRACKED" ? "#475569" : "#64748b";
+                ctx.beginPath();
+                ctx.moveTo(-45, -35);
+                ctx.lineTo(35, -45);
+                ctx.lineTo(50, 10);
+                ctx.lineTo(25, 45);
+                ctx.lineTo(-40, 40);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = "#0f172a";
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                // Cracks Overlay
+                if (currentBlock.type === "CRACKED" || currentBlock.hp < currentBlock.maxHp) {
+                    ctx.strokeStyle = "#38bdf8";
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(-20, -10);
+                    ctx.lineTo(10, 5);
+                    ctx.lineTo(-5, 25);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+
+            // Render Particle Sparks
+            for (let i = sparks.length - 1; i >= 0; i--) {
+                let s = sparks[i];
+                s.x += s.vx;
+                s.y += s.vy;
+                s.alpha -= 0.04;
+                if (s.alpha <= 0) {
+                    sparks.splice(i, 1);
+                    continue;
+                }
+                ctx.fillStyle = s.color;
+                ctx.globalAlpha = s.alpha;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+
+            // Floating Hit Damage Text
+            if (hitEffectText) {
+                hitEffectText.y -= 1;
+                hitEffectText.alpha -= 0.02;
+                if (hitEffectText.alpha <= 0) {
+                    hitEffectText = null;
+                } else {
+                    ctx.save();
+                    ctx.font = "bold 16px Pretendard, sans-serif";
+                    ctx.fillStyle = hitEffectText.color;
+                    ctx.globalAlpha = hitEffectText.alpha;
+                    ctx.fillText(hitEffectText.text, hitEffectText.x - 30, hitEffectText.y);
+                    ctx.restore();
+                }
+            }
+
+            requestAnimationFrame(drawCanvas);
+        }
+
+        let isRebindingKey = false;
+
+        function setupEventListeners() {
+            document.getElementById("mineBtn").addEventListener("click", () => {
+                executeMineHit();
+            });
+
+            canvas.addEventListener("click", () => {
+                executeMineHit();
+            });
+
+            document.getElementById("audioToggleBtn").addEventListener("click", () => {
+                soundEnabled = !soundEnabled;
+                const icon = document.getElementById("audioIcon");
+                if (soundEnabled) {
+                    icon.className = "fa-solid fa-volume-high text-amber-400";
+                    playSound('gold');
+                } else {
+                    icon.className = "fa-solid fa-volume-xmark text-slate-500";
+                }
+            });
+
+            document.querySelectorAll(".nav-btn").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    document.querySelectorAll(".nav-btn").forEach(b => {
+                        b.classList.remove("active", "text-amber-400");
+                        b.classList.add("text-slate-400");
+                    });
+                    btn.classList.add("active", "text-amber-400");
+                    btn.classList.remove("text-slate-400");
+
+                    const targetTab = btn.getAttribute("data-tab");
+                    ["tab-mine", "tab-encyclopedia", "tab-shop", "tab-settings"].forEach(id => {
+                        document.getElementById(id).classList.add("hidden");
+                    });
+                    document.getElementById(targetTab).classList.remove("hidden");
+                });
+            });
+
+            document.getElementById("upgradePickaxeBtn").addEventListener("click", () => {
+                const nextPick = PICKAXE_UPGRADES[gameState.pickaxeLevel + 1];
+                if (nextPick && gameState.gold >= nextPick.cost) {
+                    gameState.gold -= nextPick.cost;
+                    gameState.pickaxeLevel++;
+                    playSound('upgrade');
+                    saveData();
+                    updateUI();
+                    updateLog(`⚡ [곡괭이 강화!] '${nextPick.name}' (으)로 강화되었습니다.`, "text-indigo-400 font-bold");
+                }
+            });
+
+            document.getElementById("upgradeWorkerBtn").addEventListener("click", () => {
+                const curWorker = WORKER_UPGRADES[gameState.workerLevel];
+                if (curWorker && gameState.gold >= curWorker.cost && gameState.workerLevel < 10) {
+                    gameState.gold -= curWorker.cost;
+                    gameState.workerLevel++;
+                    playSound('upgrade');
+                    saveData();
+                    updateUI();
+                    updateLog(`👷 [알바 고용/강화] Lv.${gameState.workerLevel} (${WORKER_UPGRADES[gameState.workerLevel].name}) (으)로 업그레이드되었습니다.`, "text-blue-400 font-bold");
+                }
+            });
+
+            document.getElementById("upgradeDiscountBtn").addEventListener("click", () => {
+                if (gameState.encyclopediaPoints >= 6 && gameState.discountLevel < 10) {
+                    gameState.encyclopediaPoints -= 6;
+                    gameState.discountLevel += 1;
+                    playSound('upgrade');
+                    saveData();
+                    updateUI();
+                    updateLog(`📜 [도감 연구 완료] 층 해금 비용이 총 ${gameState.discountLevel * 5}% 할인됩니다!`, "text-emerald-400 font-bold");
+                }
+            });
+
+            document.getElementById("buyBuffGoldBtn").addEventListener("click", () => {
+                if (gameState.tradeStones >= 2) {
+                    gameState.tradeStones -= 2;
+                    gameState.buffGoldLevel += 1;
+                    playSound('upgrade');
+                    saveData();
+                    updateUI();
+                    updateLog(`💎 [버프 구매 완료] 원석 판매 금액 +20% 증가!`, "text-cyan-400 font-bold");
+                }
+            });
+
+            document.getElementById("buyBuffPowerBtn").addEventListener("click", () => {
+                if (gameState.tradeStones >= 3) {
+                    gameState.tradeStones -= 3;
+                    gameState.buffPowerLevel += 1;
+                    playSound('upgrade');
+                    saveData();
+                    updateUI();
+                    updateLog(`💎 [버프 구매 완료] 곡괭이 채굴력 +30% 증가!`, "text-cyan-400 font-bold");
+                }
+            });
+
+            window.addEventListener("keydown", (e) => {
+                if (isRebindingKey) {
+                    e.preventDefault();
+                    gameState.mineKey = e.code;
+                    gameState.keyDisplayName = e.key === " " ? "Space" : e.key;
+                    isRebindingKey = false;
+                    document.getElementById("rebindBtn").innerText = "키 변경하기";
+                    saveData();
+                    updateUI();
+                    updateLog(`⚙️ [조작키 변경] 광질 단축키가 [${gameState.keyDisplayName}] (으)로 변경되었습니다.`, "text-amber-300");
+                    return;
+                }
+
+                if (e.code === gameState.mineKey || (gameState.mineKey === "Space" && e.code === "Space")) {
+                    e.preventDefault();
+                    if (!isKeyDown) {
+                        isKeyDown = true;
+                        executeMineHit();
+                    }
+                }
+            });
+
+            window.addEventListener("keyup", (e) => {
+                if (e.code === gameState.mineKey || (gameState.mineKey === "Space" && e.code === "Space")) {
+                    isKeyDown = false;
+                }
+            });
+
+            document.getElementById("rebindBtn").addEventListener("click", () => {
+                isRebindingKey = true;
+                document.getElementById("rebindBtn").innerText = "원하는 키를 누르세요...";
+            });
+
+            document.getElementById("closeOreDetailBtn").addEventListener("click", () => {
+                document.getElementById("oreDetailModal").classList.add("hidden");
+            });
+
+            document.getElementById("continueAfterEndingBtn").addEventListener("click", () => {
+                document.getElementById("endingModal").classList.add("hidden");
+            });
+
+            document.getElementById("restartEndingBtn").addEventListener("click", () => {
+                localStorage.removeItem("miner_sim_save_v1");
+                location.reload();
+            });
+
+            // Modal reset handler (No confirm call)
+            document.getElementById("resetGameBtn").addEventListener("click", () => {
+                document.getElementById("resetConfirmModal").classList.remove("hidden");
+            });
+
+            document.getElementById("cancelResetBtn").addEventListener("click", () => {
+                document.getElementById("resetConfirmModal").classList.add("hidden");
+            });
+
+            document.getElementById("confirmResetBtn").addEventListener("click", () => {
+                localStorage.removeItem("miner_sim_save_v1");
+                location.reload();
+            });
+        }
+
+        function initGame() {
+            loadSavedData();
+            setupEventListeners();
+            generateNewBlock();
+            renderEncyclopediaFilters();
+            renderEncyclopedia();
+            updateUI();
+            requestAnimationFrame(drawCanvas);
+        }
+
+        window.onload = function() {
+            initGame();
+        };
+    </script>
+</body>
+</html>
