@@ -630,7 +630,7 @@
         let gameState = {
             gold: 0,
             tradeStones: 0,
-            encyclopediaPoints: 0,
+            encyclopediaPoints: 1,
             currentFloor: 1,
             maxUnlockedFloor: 1,
             pickaxeLevel: 0,
@@ -1081,7 +1081,7 @@
                     const parsed = JSON.parse(saved);
                     gameState.gold = parsed.gold || 0;
                     gameState.tradeStones = parsed.tradeStones || 0;
-                    gameState.encyclopediaPoints = parsed.encyclopediaPoints || 0;
+                    gameState.encyclopediaPoints = parsed.encyclopediaPoints || 1;
                     gameState.currentFloor = parsed.currentFloor || 1;
                     gameState.maxUnlockedFloor = parsed.maxUnlockedFloor || 1;
                     gameState.pickaxeLevel = parsed.pickaxeLevel || 0;
