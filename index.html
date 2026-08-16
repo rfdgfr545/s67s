@@ -1122,24 +1122,62 @@
         function drawCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Tunnel Background
+            // Realistic tunnel: layered stone, timber supports, dust and headlamp light
             const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            grad.addColorStop(0, "#0b1329");
-            grad.addColorStop(0.5, "#182238");
-            grad.addColorStop(1, "#080c18");
+            grad.addColorStop(0, "#050912");
+            grad.addColorStop(0.48, "#1a2331");
+            grad.addColorStop(1, "#070a0f");
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Shaft ceiling and ground
-            ctx.fillStyle = "#1e293b";
-            ctx.fillRect(0, 0, canvas.width, 35);
-            ctx.fillRect(0, canvas.height - 35, canvas.width, 35);
+            // Stable stone speckles: no flickering between frames
+            for (let i = 0; i < 180; i++) {
+                const x = (i * 67) % canvas.width;
+                const y = 38 + ((i * 43) % (canvas.height - 76));
+                const shade = 28 + ((i * 17) % 28);
+                ctx.fillStyle = `rgba(${shade}, ${shade + 7}, ${shade + 13}, 0.42)`;
+                ctx.fillRect(x, y, 1 + (i % 3), 1 + ((i + 1) % 3));
+            }
 
-            // Shaft support beams
-            ctx.fillStyle = "#334155";
-            ctx.fillRect(100, 0, 20, canvas.height);
-            ctx.fillRect(320, 0, 20, canvas.height);
-            ctx.fillRect(620, 0, 20, canvas.height);
+            // Rough ceiling and ground strata
+            const stone = ctx.createLinearGradient(0, 0, 0, 42);
+            stone.addColorStop(0, "#11151b");
+            stone.addColorStop(0.45, "#3e4140");
+            stone.addColorStop(1, "#171b20");
+            ctx.fillStyle = stone;
+            ctx.fillRect(0, 0, canvas.width, 42);
+            ctx.fillRect(0, canvas.height - 42, canvas.width, 42);
+            ctx.strokeStyle = "rgba(148, 163, 184, 0.18)";
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 54) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x + 24, 42);
+                ctx.moveTo(x + 10, canvas.height - 42);
+                ctx.lineTo(x + 42, canvas.height);
+                ctx.stroke();
+            }
+
+            // Weathered wooden support beams
+            [100, 320, 620].forEach((x) => {
+                const wood = ctx.createLinearGradient(x, 0, x + 22, 0);
+                wood.addColorStop(0, "#2a160b");
+                wood.addColorStop(0.5, "#76502d");
+                wood.addColorStop(1, "#231108");
+                ctx.fillStyle = wood;
+                ctx.fillRect(x, 28, 22, canvas.height - 56);
+                ctx.fillStyle = "rgba(15, 8, 4, 0.38)";
+                ctx.fillRect(x + 5, 28, 3, canvas.height - 56);
+                ctx.fillRect(x + 15, 28, 2, canvas.height - 56);
+            });
+
+            // Warm lamp cone around the miner
+            const lampGlow = ctx.createRadialGradient(195, 158, 8, 195, 158, 230);
+            lampGlow.addColorStop(0, "rgba(255, 225, 145, 0.20)");
+            lampGlow.addColorStop(0.42, "rgba(255, 184, 82, 0.07)");
+            lampGlow.addColorStop(1, "rgba(255, 184, 82, 0)");
+            ctx.fillStyle = lampGlow;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             // Draw miner
             ctx.save();
@@ -1180,19 +1218,23 @@
 
             ctx.restore();
 
-            // Draw target rock
+            // Draw target rock with mineral veins and dimensional shading
             if (currentBlock.hp > 0) {
                 ctx.save();
                 ctx.translate(currentBlock.x, currentBlock.y);
 
-                // Rock Shadow
-                ctx.fillStyle = "rgba(0,0,0,0.4)";
+                ctx.fillStyle = "rgba(0,0,0,0.58)";
                 ctx.beginPath();
-                ctx.ellipse(0, 50, 50, 15, 0, 0, Math.PI * 2);
+                ctx.ellipse(4, 54, 58, 17, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Rock Shape
-                ctx.fillStyle = currentBlock.type === "HARD" ? "#334155" : currentBlock.type === "CRACKED" ? "#475569" : "#64748b";
+                const rockBase = currentBlock.type === "HARD" ? "#263445" : currentBlock.type === "CRACKED" ? "#48576a" : "#5a6574";
+                const rockLight = currentBlock.type === "HARD" ? "#58718a" : currentBlock.type === "CRACKED" ? "#8290a1" : "#94a3b8";
+                const rockGradient = ctx.createRadialGradient(-18, -24, 4, 0, 0, 72);
+                rockGradient.addColorStop(0, rockLight);
+                rockGradient.addColorStop(0.58, rockBase);
+                rockGradient.addColorStop(1, "#111827");
+                ctx.fillStyle = rockGradient;
                 ctx.beginPath();
                 ctx.moveTo(-45, -35);
                 ctx.lineTo(35, -45);
@@ -1201,19 +1243,32 @@
                 ctx.lineTo(-40, 40);
                 ctx.closePath();
                 ctx.fill();
-                ctx.strokeStyle = "#0f172a";
+                ctx.strokeStyle = "#0b1018";
                 ctx.lineWidth = 4;
                 ctx.stroke();
 
-                // Cracks Overlay
+                // Mineral grain and highlights
+                for (let i = 0; i < 14; i++) {
+                    const x = -32 + ((i * 19) % 65);
+                    const y = -24 + ((i * 29) % 54);
+                    ctx.fillStyle = i % 3 === 0 ? "rgba(226, 232, 240, 0.20)" : "rgba(15, 23, 42, 0.32)";
+                    ctx.beginPath();
+                    ctx.arc(x, y, 1 + (i % 2), 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
                 if (currentBlock.type === "CRACKED" || currentBlock.hp < currentBlock.maxHp) {
-                    ctx.strokeStyle = "#38bdf8";
+                    ctx.strokeStyle = "rgba(125, 211, 252, 0.88)";
+                    ctx.shadowColor = "#38bdf8";
+                    ctx.shadowBlur = 7;
                     ctx.lineWidth = 2;
                     ctx.beginPath();
-                    ctx.moveTo(-20, -10);
-                    ctx.lineTo(10, 5);
-                    ctx.lineTo(-5, 25);
+                    ctx.moveTo(-22, -12);
+                    ctx.lineTo(-4, 1);
+                    ctx.lineTo(12, -4);
+                    ctx.lineTo(5, 24);
                     ctx.stroke();
+                    ctx.shadowBlur = 0;
                 }
 
                 ctx.restore();
