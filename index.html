@@ -73,7 +73,7 @@
                 </div>
                 <div class="bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs sm:text-sm hidden sm:flex">
                     <i class="fa-solid fa-trophy text-rose-400"></i>
-                    <span id="goalDisplay" class="font-bold text-rose-300">목표: 10¹⁸ G</span>
+                    <span id="goalDisplay" class="font-bold text-rose-300">목표: 10조 G</span>
                 </div>
                 <div class="bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs sm:text-sm">
                     <i class="fa-solid fa-gem text-cyan-400"></i>
@@ -355,7 +355,7 @@
             </div>
             <h2 class="text-2xl font-black text-amber-400">🎉 전설의 광부 등극! 🎉</h2>
             <p class="text-sm text-slate-300">
-                축하합니다! 총 <span class="text-amber-300 font-bold">10¹⁸ G (100경 G)</span>의 골드를 달성하여 지상 최고의 광산 재벌이 되었습니다!
+                축하합니다! 총 <span class="text-amber-300 font-bold">10조 G</span>의 골드를 달성하여 지상 최고의 광산 재벌이 되었습니다!
             </p>
             <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-400">
                 지하 12층 전설의 원석들을 모두 정복하셨습니다.
@@ -673,7 +673,7 @@
         }
 
         function checkEnding() {
-            if (gameState.gold >= 1e18 && !gameState.hasCleared) {
+            if (gameState.gold >= 1e13 && !gameState.hasCleared) {
                 gameState.hasCleared = true;
                 saveData();
                 document.getElementById("endingModal").classList.remove("hidden");
